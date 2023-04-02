@@ -18,12 +18,12 @@ package gkr
 
 import (
 	"fmt"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/polynomial"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/sumcheck"
-	fiatshamir "github.com/consensys/gnark-crypto/fiat-shamir"
-	"github.com/consensys/gnark-crypto/internal/parallel"
-	"github.com/consensys/gnark-crypto/utils"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/polynomial"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/sumcheck"
+	fiatshamir "github.com/vocdoni/gnark-crypto-bn254/fiat-shamir"
+	"github.com/vocdoni/gnark-crypto-bn254/internal/parallel"
+	"github.com/vocdoni/gnark-crypto-bn254/utils"
 	"math/big"
 	"strconv"
 	"sync"

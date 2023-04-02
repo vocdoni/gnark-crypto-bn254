@@ -19,9 +19,9 @@ package pedersen
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
 	"math/big"
 )
 

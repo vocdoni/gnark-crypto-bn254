@@ -22,12 +22,12 @@ import (
 	"math/big"
 	"sort"
 
-	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/permutation"
-	fiatshamir "github.com/consensys/gnark-crypto/fiat-shamir"
+	bn254 "github.com/vocdoni/gnark-crypto-bn254/ecc/bn254"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/fft"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/kzg"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/permutation"
+	fiatshamir "github.com/vocdoni/gnark-crypto-bn254/fiat-shamir"
 )
 
 var (

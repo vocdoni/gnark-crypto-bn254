@@ -20,7 +20,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fp"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/prop"
 )

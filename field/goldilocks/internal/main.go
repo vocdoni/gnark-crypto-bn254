@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/consensys/gnark-crypto/field/generator"
-	"github.com/consensys/gnark-crypto/field/generator/config"
+	"github.com/vocdoni/gnark-crypto-bn254/field/generator"
+	"github.com/vocdoni/gnark-crypto-bn254/field/generator/config"
 )
 
 //go:generate go run main.go

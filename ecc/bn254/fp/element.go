@@ -28,8 +28,8 @@ import (
 	"strings"
 
 	"github.com/bits-and-blooms/bitset"
-	"github.com/consensys/gnark-crypto/field/hash"
-	"github.com/consensys/gnark-crypto/field/pool"
+	"github.com/vocdoni/gnark-crypto-bn254/field/hash"
+	"github.com/vocdoni/gnark-crypto-bn254/field/pool"
 )
 
 // Element represents a field element stored on 4 words (uint64)

@@ -19,7 +19,7 @@ package polynomial
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
 	"reflect"
 	"runtime"
 	"sort"

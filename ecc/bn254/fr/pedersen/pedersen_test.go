@@ -17,8 +17,8 @@
 package pedersen
 
 import (
-	"github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"testing"

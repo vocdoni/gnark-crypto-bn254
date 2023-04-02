@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	field "github.com/consensys/gnark-crypto/field/generator/config"
+	field "github.com/vocdoni/gnark-crypto-bn254/field/generator/config"
 )
 
 // integration test will create modulus for various field sizes and run tests

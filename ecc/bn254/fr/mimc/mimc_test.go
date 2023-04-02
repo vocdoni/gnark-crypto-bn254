@@ -1,8 +1,8 @@
 package mimc_test
 
 import (
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/mimc"
-	fiatshamir "github.com/consensys/gnark-crypto/fiat-shamir"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/mimc"
+	fiatshamir "github.com/vocdoni/gnark-crypto-bn254/fiat-shamir"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

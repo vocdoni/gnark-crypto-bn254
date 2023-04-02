@@ -23,9 +23,9 @@ import (
 	"math/bits"
 
 	"github.com/bits-and-blooms/bitset"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
-	"github.com/consensys/gnark-crypto/internal/parallel"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
+	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr/fft"
+	"github.com/vocdoni/gnark-crypto-bn254/internal/parallel"
 	"golang.org/x/crypto/blake2b"
 )
 

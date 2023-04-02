@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/consensys/gnark-crypto/field/hash"
-	"github.com/consensys/gnark-crypto/field/pool"
+	"github.com/vocdoni/gnark-crypto-bn254/field/hash"
+	"github.com/vocdoni/gnark-crypto-bn254/field/pool"
 	"github.com/bits-and-blooms/bitset"
 )
 

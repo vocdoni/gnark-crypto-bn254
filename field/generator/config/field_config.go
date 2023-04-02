@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/consensys/bavard"
-	"github.com/consensys/gnark-crypto/field/generator/internal/addchain"
+	"github.com/vocdoni/gnark-crypto-bn254/field/generator/internal/addchain"
 )
 
 var (

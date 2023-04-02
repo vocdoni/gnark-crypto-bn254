@@ -30,7 +30,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/consensys/gnark-crypto/internal/generator/config"
+	"github.com/vocdoni/gnark-crypto-bn254/internal/generator/config"
 )
 
 // ID represent a unique ID for a curve
@@ -40,21 +40,11 @@ type ID uint16
 const (
 	UNKNOWN ID = iota
 	BN254
-	BLS12_377
-	BLS12_378
-	BLS12_381
-	BLS24_315
-	BLS24_317
-	BW6_761
-	BW6_633
-	BW6_756
-	STARK_CURVE
-	SECP256K1
 )
 
 // Implemented return the list of curves fully implemented in gnark-crypto
 func Implemented() []ID {
-	return []ID{BN254, BLS12_377, BLS12_381, BW6_761, BLS24_315, BW6_633, BLS12_378, BW6_756, BLS24_317, STARK_CURVE, SECP256K1}
+	return []ID{BN254}
 }
 
 func (id ID) String() string {
@@ -78,28 +68,8 @@ func (id ID) config() *config.Curve {
 	// note to avoid circular dependency these are hard coded
 	// values are checked for non regression in code generation
 	switch id {
-	case BLS12_377:
-		return &config.BLS12_377
-	case BLS12_378:
-		return &config.BLS12_378
-	case BLS12_381:
-		return &config.BLS12_381
 	case BN254:
 		return &config.BN254
-	case BW6_761:
-		return &config.BW6_761
-	case BW6_633:
-		return &config.BW6_633
-	case BLS24_315:
-		return &config.BLS24_315
-	case BLS24_317:
-		return &config.BLS24_317
-	case BW6_756:
-		return &config.BW6_756
-	case STARK_CURVE:
-		return &config.STARK_CURVE
-	case SECP256K1:
-		return &config.SECP256K1
 	default:
 		panic("unimplemented ecc ID")
 	}
