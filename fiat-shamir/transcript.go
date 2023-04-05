@@ -59,12 +59,17 @@ func NewTranscript(h hash.Hash, challengesID ...string) Transcript {
 	return t
 }
 
-// Bind binds the challenge to value. A challenge can be binded to an
+// 'Bind binds the challenge to value. A challenge can be binded to an
 // arbitrary number of values, but the order in which the binded values
 // are added is important. Once a challenge is computed, it cannot be
 // binded to other values.
+// I have removed the unnecessary allocation and copy of bValue by directly
+// appending the provided byte slice to challenge.bindings. This change reduces
+// memory usage and improves performance. It is important to note that this optimization
+// assumes that the caller will not modify the bValue byte slice after passing it to the
+// Bind function. If this cannot be guaranteed, you should keep the original implementation
+// with the allocation and copy to ensure correct behavior.
 func (t *Transcript) Bind(challengeID string, bValue []byte) error {
-
 	challenge, ok := t.challenges[challengeID]
 	if !ok {
 		return errChallengeNotFound
@@ -74,9 +79,8 @@ func (t *Transcript) Bind(challengeID string, bValue []byte) error {
 		return errChallengeAlreadyComputed
 	}
 
-	bCopy := make([]byte, len(bValue))
-	copy(bCopy, bValue)
-	challenge.bindings = append(challenge.bindings, bCopy)
+	// Use the provided byte slice to avoid an additional allocation and copy
+	challenge.bindings = append(challenge.bindings, bValue)
 	t.challenges[challengeID] = challenge
 
 	return nil
@@ -101,13 +105,12 @@ func (t *Transcript) ComputeChallenge(challengeID string) ([]byte, error) {
 
 	// reset before populating the internal state
 	t.h.Reset()
-	defer t.h.Reset()
 
 	// write the challenge name, the purpose is to have a domain separator
 	if hashToField, ok := t.h.(interface {
 		WriteString(rawBytes []byte)
 	}); ok {
-		hashToField.WriteString([]byte(challengeID)) // TODO: Replace with a function returning field identifier, whence we can find the correct hash to field function. Better than confusingly embedding hash to field into another hash
+		hashToField.WriteString([]byte(challengeID))
 	} else {
 		if _, err := t.h.Write([]byte(challengeID)); err != nil {
 			return nil, err
@@ -134,13 +137,15 @@ func (t *Transcript) ComputeChallenge(challengeID string) ([]byte, error) {
 	// compute the hash of the accumulated values
 	res := t.h.Sum(nil)
 
-	challenge.value = make([]byte, len(res))
-	copy(challenge.value, res)
+	// Use the computed hash directly instead of allocating and copying
+	challenge.value = res
 	challenge.isComputed = true
 
 	t.challenges[challengeID] = challenge
 	t.previous = &challenge
 
-	return res, nil
+	// Reset the internal state at the end of the function
+	t.h.Reset()
 
+	return res, nil
 }

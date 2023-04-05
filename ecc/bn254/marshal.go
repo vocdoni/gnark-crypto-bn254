@@ -22,6 +22,7 @@ import (
 	"io"
 	"reflect"
 	"sync/atomic"
+	"fmt"
 
 	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fp"
 	"github.com/vocdoni/gnark-crypto-bn254/ecc/bn254/fr"
@@ -75,16 +76,15 @@ func NewDecoder(r io.Reader, options ...func(*Decoder)) *Decoder {
 // Decode reads the binary encoding of v from the stream
 // type must be *uint64, *fr.Element, *fp.Element, *G1Affine, *G2Affine, *[]G1Affine or *[]G2Affine
 func (dec *Decoder) Decode(v interface{}) (err error) {
-	rv := reflect.ValueOf(v)
-	if v == nil || rv.Kind() != reflect.Ptr || rv.IsNil() || !rv.Elem().CanSet() {
-		return errors.New("bn254 decoder: unsupported type, need pointer")
-	}
-
 	// implementation note: code is a bit verbose (abusing code generation), but minimize allocations on the heap
 	// in particular, careful attention must be given to usage of Bytes() method on Elements and Points
 	// that return an array (not a slice) of bytes. Using this is beneficial to minimize memory allocations
 	// in very large (de)serialization upstream in gnark.
 	// (but detrimental to code readability here)
+
+	if v == nil {
+		return errors.New("bn254 decoder: unsupported type, need pointer")
+	}
 
 	var read64 int64
 	if vf, ok := v.(io.ReaderFrom); ok {
@@ -96,6 +96,7 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 	var buf [SizeOfG2AffineUncompressed]byte
 	var read int
 
+	fmt.Printf("decoding %T\n", v)
 	switch t := v.(type) {
 	case *fr.Element:
 		read, err = io.ReadFull(dec.r, buf[:fr.Bytes])
@@ -201,6 +202,8 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 				compressed[i] = !r
 			}
 		}
+		
+		fmt.Println("starting parallel decompression")
 		var nbErrs uint64
 		parallel.Execute(len(compressed), func(start, end int) {
 			for i := start; i < end; i++ {

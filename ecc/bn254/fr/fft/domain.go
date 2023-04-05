@@ -118,13 +118,76 @@ func Generator(m uint64) (fr.Element, error) {
 	return generator, nil
 }
 
-func (d *Domain) reverseCosetTables() {
+/*func (d *Domain) reverseCosetTables() {
 	d.CosetTableReversed = make([]fr.Element, d.Cardinality)
 	d.CosetTableInvReversed = make([]fr.Element, d.Cardinality)
 	copy(d.CosetTableReversed, d.CosetTable)
 	copy(d.CosetTableInvReversed, d.CosetTableInv)
 	BitReverse(d.CosetTableReversed)
 	BitReverse(d.CosetTableInvReversed)
+}
+*/
+
+func (d *Domain) reverseCosetTables() {
+	fmt.Println("reverseCosetTables cardinality", d.Cardinality, "len(d.CosetTable)", len(d.CosetTable), "len(d.CosetTableReversed)", len(d.CosetTableReversed), "len(d.CosetTableInvReversed)", len(d.CosetTableInvReversed))
+	const ChunkSize = 100000
+
+	// Create a temporary buffer with a smaller size
+	tempBuffer := make([]fr.Element, ChunkSize)
+
+	// Calculate the number of chunks needed to process the entire slice
+	numChunks := uint64((d.Cardinality + ChunkSize - 1) / ChunkSize)
+
+	// Iterate over each chunk
+	for chunkIndex := uint64(0); chunkIndex < numChunks; chunkIndex++ {
+		fmt.Println("chunk", chunkIndex, "of", numChunks)
+		startIndex := uint64(chunkIndex * ChunkSize)
+		endIndex := uint64((chunkIndex + 1) * ChunkSize)
+		if endIndex > d.Cardinality {
+			endIndex = d.Cardinality
+		}
+
+		// Copy data to the temporary buffer and reverse it
+		bitReverseCopy(tempBuffer[:endIndex-startIndex], d.CosetTable[startIndex:endIndex])
+
+		// Copy the reversed data back to d.CosetTable
+		copy(d.CosetTable[startIndex:endIndex], tempBuffer[:endIndex-startIndex])
+
+		// Repeat the same process for d.CosetTableInv
+		bitReverseCopy(tempBuffer[:endIndex-startIndex], d.CosetTableInv[startIndex:endIndex])
+		copy(d.CosetTableInv[startIndex:endIndex], tempBuffer[:endIndex-startIndex])
+	}
+}
+
+/*
+func (d *Domain) reverseCosetTables() {
+	fmt.Println("reverseCosetTables cardinality", d.Cardinality, "len(d.CosetTable)", len(d.CosetTable), "len(d.CosetTableReversed)", len(d.CosetTableReversed), "len(d.CosetTableInvReversed)", len(d.CosetTableInvReversed))
+	d.CosetTableReversed = make([]fr.Element, d.Cardinality)
+	d.CosetTableInvReversed = make([]fr.Element, d.Cardinality)
+	
+	fmt.Println("starting bitreverse")
+
+	bitReverseCopy(d.CosetTableReversed, d.CosetTable)
+	bitReverseCopy(d.CosetTableInvReversed, d.CosetTableInv)
+}
+*/
+
+func bitReverseCopy(dst, src []fr.Element) {
+	fmt.Println("bitReverseCopy len(src)", len(src), "len(dst)", len(dst))
+	n := len(src)
+	for i := 0; i < n; i++ {
+		reversedIndex := bitReverseIndex(i, n)
+		dst[reversedIndex] = src[i]
+	}
+}
+
+
+func bitReverseIndex(index, length int) int {
+	reversedIndex := 0
+	for i := index; i != 0; i >>= 1 {
+		reversedIndex = (reversedIndex << 1) | (i & 1)
+	}
+	return reversedIndex >> bits.LeadingZeros(uint(length))
 }
 
 func (d *Domain) preComputeTwiddles() {
@@ -243,17 +306,21 @@ func (d *Domain) ReadFrom(r io.Reader) (int64, error) {
 
 	toDecode := []interface{}{&d.Cardinality, &d.CardinalityInv, &d.Generator, &d.GeneratorInv, &d.FrMultiplicativeGen, &d.FrMultiplicativeGenInv}
 
+	fmt.Println("starting toDecode")
 	for _, v := range toDecode {
 		if err := dec.Decode(v); err != nil {
 			return dec.BytesRead(), err
 		}
 	}
-
+	fmt.Println("done toDecode, bytes read = ", dec.BytesRead())
+	fmt.Println("twiddle factors")
 	// twiddle factors
 	d.preComputeTwiddles()
-
+	
+	fmt.Println("reverse coset tables")
 	// store the bit reversed coset tables if needed
 	d.reverseCosetTables()
 
+	fmt.Println("done")
 	return dec.BytesRead(), nil
 }

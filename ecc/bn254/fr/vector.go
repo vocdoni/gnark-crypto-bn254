@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"io"
 	"strings"
+	"fmt"
 )
 
 // Vector represents a slice of Element.
@@ -76,6 +77,47 @@ func (vector *Vector) WriteTo(w io.Writer) (int64, error) {
 // ReadFrom implements io.ReaderFrom and reads a vector of big endian encoded Element.
 // Length of the vector must be encoded as a uint32 on the first 4 bytes.
 func (vector *Vector) ReadFrom(r io.Reader) (int64, error) {
+	const chunkSize = 100000
+
+	var buf [Bytes]byte
+	if read, err := io.ReadFull(r, buf[:4]); err != nil {
+		return int64(read), err
+	}
+	sliceLen := binary.BigEndian.Uint32(buf[:4])
+
+	n := int64(4)
+	fmt.Println("reading vector of length", sliceLen, "in chunks of", chunkSize, "elements")
+	chunks := (int(sliceLen) + chunkSize - 1) / chunkSize
+	*vector = make(Vector, 0, sliceLen)
+
+	for c := 0; c < chunks; c++ {
+		fmt.Println("chunk", c, "of", chunks)
+		currentChunkSize := chunkSize
+		if c == chunks-1 {
+			currentChunkSize = int(sliceLen) - (chunkSize * (chunks - 1))
+		}
+
+		chunk := make(Vector, currentChunkSize)
+		for i := 0; i < currentChunkSize; i++ {
+			read, err := io.ReadFull(r, buf[:])
+			n += int64(read)
+			if err != nil {
+				return n, err
+			}
+			chunk[i], err = BigEndian.Element(&buf)
+			if err != nil {
+				return n, err
+			}
+		}
+
+		*vector = append(*vector, chunk...)
+	}
+
+	return n, nil
+}
+
+
+/*func (vector *Vector) ReadFrom(r io.Reader) (int64, error) {
 
 	var buf [Bytes]byte
 	if read, err := io.ReadFull(r, buf[:4]); err != nil {
@@ -99,7 +141,7 @@ func (vector *Vector) ReadFrom(r io.Reader) (int64, error) {
 	}
 
 	return n, nil
-}
+}*/
 
 // String implements fmt.Stringer interface
 func (vector Vector) String() string {

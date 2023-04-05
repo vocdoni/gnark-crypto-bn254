@@ -120,7 +120,7 @@ func (p *Polynomial) Blind(blindingOrder int) *Polynomial {
 	// where n is the size of wq.
 	newSize := p.size + blindingOrder + 1
 
-	// Resize p. The size of wq might has already been increased
+	// Resize p. The size of wq might have already been increased
 	// (e.g. when the polynomial is evaluated on a larger domain),
 	// if that's the case we don't resize the polynomial.
 	p.grow(newSize)
@@ -128,15 +128,17 @@ func (p *Polynomial) Blind(blindingOrder int) *Polynomial {
 	// blinding: we add Q(X)(X^{n}-1) to P, where deg(Q)=blindingOrder
 	var r fr.Element
 
+	coefficients := *p.coefficients
 	for i := 0; i <= blindingOrder; i++ {
 		r.SetRandom()
-		(*p.coefficients)[i].Sub(&(*p.coefficients)[i], &r)
-		(*p.coefficients)[i+p.size].Add(&(*p.coefficients)[i+p.size], &r)
+		coefficients[i].Sub(&coefficients[i], &r)
+		coefficients[i+p.size].Add(&coefficients[i+p.size], &r)
 	}
 	p.blindedSize = newSize
 
 	return p
 }
+
 
 // Evaluate evaluates p at x.
 // The code panics if the function is not in canonical form.
@@ -167,8 +169,12 @@ func (p *Polynomial) Evaluate(x fr.Element) fr.Element {
 // see also ShallowClone to perform a ShallowClone on the underlying polynomial.
 // If capacity is provided, the new coefficient slice capacity will be set accordingly.
 func (p *Polynomial) Clone(capacity ...int) *Polynomial {
-	res := p.ShallowClone()
-	res.polynomial = p.polynomial.clone(capacity...)
+	res := &Polynomial{
+		polynomial:  p.polynomial.clone(capacity...),
+		size:        p.size,
+		blindedSize: p.blindedSize,
+		shift:       p.shift,
+	}
 	return res
 }
 
