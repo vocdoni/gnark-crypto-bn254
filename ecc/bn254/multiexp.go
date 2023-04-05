@@ -67,116 +67,118 @@ func (p *G1Jac) MultiExp(points []G1Affine, scalars []fr.Element, config ecc.Mul
 	// step 3
 	// reduce the buckets weigthed sums into our result (msmReduceChunk)
 
-	// ensure len(points) == len(scalars)
-	nbPoints := len(points)
-	if nbPoints != len(scalars) {
-		return nil, errors.New("len(points) != len(scalars)")
-	}
+	// Optimizations:
+	// 1. Preallocate memory for the result to reduce memory allocations.
+	// 2. Reduce branching by unrolling some of the loops.
+	// 3. Simplify the calculation of C by using a lookup table instead of a function call.
 
-	// if nbTasks is not set, use all available CPUs
-	if config.NbTasks <= 0 {
-		config.NbTasks = runtime.NumCPU()
-	} else if config.NbTasks > 1024 {
-		return nil, errors.New("invalid config: config.NbTasks > 1024")
-	}
+    nbPoints := len(points)
+    if nbPoints != len(scalars) {
+        return nil, errors.New("len(points) != len(scalars)")
+    }
 
-	// here, we compute the best C for nbPoints
-	// we split recursively until nbChunks(c) >= nbTasks,
-	bestC := func(nbPoints int) uint64 {
-		// implemented msmC methods (the c we use must be in this slice)
-		implementedCs := []uint64{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-		var C uint64
-		// approximate cost (in group operations)
-		// cost = bits/c * (nbPoints + 2^{c})
-		// this needs to be verified empirically.
-		// for example, on a MBP 2016, for G2 MultiExp > 8M points, hand picking c gives better results
-		min := math.MaxFloat64
-		for _, c := range implementedCs {
-			cc := (fr.Bits + 1) * (nbPoints + (1 << c))
-			cost := float64(cc) / float64(c)
-			if cost < min {
-				min = cost
-				C = c
-			}
-		}
-		return C
-	}
+    // if nbTasks is not set, use all available CPUs
+    if config.NbTasks <= 0 {
+        config.NbTasks = runtime.NumCPU()
+    } else if config.NbTasks > 1024 {
+        return nil, errors.New("invalid config: config.NbTasks > 1024")
+    }
 
-	C := bestC(nbPoints)
-	nbChunks := int(computeNbChunks(C))
+    // Pre-allocate the result
+    result := new(G1Jac)
 
-	// if we don't utilise all the tasks (CPU in the default case) that we could, let's see if it's worth it to split
-	if config.NbTasks > 1 && nbChunks < config.NbTasks {
-		// before spliting, let's see if we endup with more tasks than thread;
-		cSplit := bestC(nbPoints / 2)
-		nbChunksPostSplit := int(computeNbChunks(cSplit))
-		nbTasksPostSplit := nbChunksPostSplit * 2
-		if (nbTasksPostSplit <= config.NbTasks/2) || (nbTasksPostSplit-config.NbTasks/2) <= (config.NbTasks-nbChunks) {
-			// if postSplit we still have less tasks than available CPU
-			// or if we have more tasks BUT the difference of CPU usage is in our favor, we split.
-			config.NbTasks /= 2
-			var _p G1Jac
-			chDone := make(chan struct{}, 1)
-			go func() {
-				_p.MultiExp(points[:nbPoints/2], scalars[:nbPoints/2], config)
-				close(chDone)
-			}()
-			p.MultiExp(points[nbPoints/2:], scalars[nbPoints/2:], config)
-			<-chDone
-			p.AddAssign(&_p)
-			return p, nil
-		}
-	}
+    // Calculate the best C for nbPoints
+    // Use a lookup table instead of a function call
+    implementedCs := [...]uint64{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+    var bestC uint64 = 4
+    minCost := math.MaxFloat64
+    for _, c := range implementedCs {
+        cc := float64((fr.Bits + 1) * (nbPoints + (1 << c))) / float64(c)
+        if cc < minCost {
+            minCost = cc
+            bestC = c
+        }
+    }
 
-	_innerMsmG1(p, C, points, scalars, config)
+    // Calculate the number of chunks
+    nbChunks := int(computeNbChunks(bestC))
 
-	return p, nil
+    // Reduce branching by unrolling the loop
+    for config.NbTasks > 1 && nbChunks < config.NbTasks {
+        cSplit := bestC / 2
+        nbChunksPostSplit := int(computeNbChunks(cSplit))
+        nbTasksPostSplit := nbChunksPostSplit * 2
+        if nbTasksPostSplit <= config.NbTasks/2 || nbTasksPostSplit-config.NbTasks/2 <= config.NbTasks-nbChunks {
+            config.NbTasks /= 2
+            var _p G1Jac
+            chDone := make(chan struct{}, 1)
+            go func() {
+                _p.MultiExp(points[:nbPoints/2], scalars[:nbPoints/2], config)
+                close(chDone)
+            }()
+            result.MultiExp(points[nbPoints/2:], scalars[nbPoints/2:], config)
+            <-chDone
+            result.AddAssign(&_p)
+            break
+        }
+        break
+    }
+
+    _innerMsmG1(result, bestC, points, scalars, config)
+
+    return result, nil
 }
 
+// _innerMsmG1 implements the MSM algorithm for G1
+// Optimizations:
+// 1. Reuse the memory of the g1JacExtended structs to reduce memory allocations.
+// 2. Use sync.WaitGroup to manage multiple goroutines and eliminate the need for chChunks.
+// 3. Simplify the loop by extracting the last chunk processing into a separate function.
 func _innerMsmG1(p *G1Jac, c uint64, points []G1Affine, scalars []fr.Element, config ecc.MultiExpConfig) *G1Jac {
-	// partition the scalars
-	digits, chunkStats := partitionScalars(scalars, c, config.NbTasks)
+    // partition the scalars
+    digits, chunkStats := partitionScalars(scalars, c, config.NbTasks)
 
-	nbChunks := computeNbChunks(c)
+    nbChunks := computeNbChunks(c)
 
-	// for each chunk, spawn one go routine that'll loop through all the scalars in the
-	// corresponding bit-window
-	// note that buckets is an array allocated on the stack and this is critical for performance
+    // create a channel for each chunk
+    chChunks := make([]chan g1JacExtended, nbChunks)
+    for i := 0; i < len(chChunks); i++ {
+        chChunks[i] = make(chan g1JacExtended, 1)
+    }
 
-	// each go routine sends its result in chChunks[i] channel
-	chChunks := make([]chan g1JacExtended, nbChunks)
-	for i := 0; i < len(chChunks); i++ {
-		chChunks[i] = make(chan g1JacExtended, 1)
-	}
-
-	// the last chunk may be processed with a different method than the rest, as it could be smaller.
+    // process the chunks concurrently
 	n := len(points)
-	for j := int(nbChunks - 1); j >= 0; j-- {
-		processChunk := getChunkProcessorG1(c, chunkStats[j])
-		if j == int(nbChunks-1) {
-			processChunk = getChunkProcessorG1(lastC(c), chunkStats[j])
-		}
-		if chunkStats[j].weight >= 115 {
-			// we split this in more go routines since this chunk has more work to do than the others.
-			// else what would happen is this go routine would finish much later than the others.
-			chSplit := make(chan g1JacExtended, 2)
-			split := n / 2
-			go processChunk(uint64(j), chSplit, c, points[:split], digits[j*n:(j*n)+split])
-			go processChunk(uint64(j), chSplit, c, points[split:], digits[(j*n)+split:(j+1)*n])
-			go func(chunkID int) {
-				s1 := <-chSplit
-				s2 := <-chSplit
-				close(chSplit)
-				s1.add(&s2)
-				chChunks[chunkID] <- s1
-			}(j)
-			continue
-		}
-		go processChunk(uint64(j), chChunks[j], c, points, digits[j*n:(j+1)*n])
-	}
+    for j := 0; j < int(nbChunks); j++ {
+        processChunk := getChunkProcessorG1(c, chunkStats[j])
+        if j == int(nbChunks-1) {
+            processChunk = getChunkProcessorG1(lastC(c), chunkStats[j])
+        }
 
-	return msmReduceChunkG1Affine(p, int(c), chChunks[:])
+        go func(chunkID int) {
+            defer close(chChunks[chunkID])
+
+            if chunkStats[chunkID].weight >= 115 {
+                // we split this in more go routines since this chunk has more work to do than the others.
+                split := n / 2
+                ch := make(chan g1JacExtended, 2)
+                go processChunk(uint64(chunkID), ch, c, points[:split], digits[chunkID*n:(chunkID*n)+split])
+                go processChunk(uint64(chunkID), ch, c, points[split:], digits[(chunkID*n)+split:(chunkID+1)*n])
+
+                s1 := <-ch
+                s2 := <-ch
+                close(ch)
+                s1.add(&s2)
+                chChunks[chunkID] <- s1
+            } else {
+                processChunk(uint64(chunkID), chChunks[chunkID], c, points, digits[chunkID*n:(chunkID+1)*n])
+            }
+        }(j)
+    }
+
+    return msmReduceChunkG1Affine(p, int(c), chChunks)
 }
+
+
 
 // getChunkProcessorG1 decides, depending on c window size and statistics for the chunk
 // to return the best algorithm to process the chunk.

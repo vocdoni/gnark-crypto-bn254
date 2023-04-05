@@ -979,7 +979,6 @@ func (p *G2Affine) setBytes(buf []byte, subGroupCheck bool) (int, error) {
 
 		return SizeOfG2AffineUncompressed, nil
 	}
-
 	// we have a compressed coordinate
 	// we need to
 	// 	1. copy the buffer (to keep this method thread safe)
@@ -999,7 +998,6 @@ func (p *G2Affine) setBytes(buf []byte, subGroupCheck bool) (int, error) {
 	}
 
 	var YSquared, Y fptower.E2
-
 	YSquared.Square(&p.X).Mul(&YSquared, &p.X)
 	YSquared.Add(&YSquared, &bTwistCurveCoeff)
 	if YSquared.Legendre() == -1 {
@@ -1020,12 +1018,10 @@ func (p *G2Affine) setBytes(buf []byte, subGroupCheck bool) (int, error) {
 	}
 
 	p.Y = Y
-
 	// subgroup check
 	if subGroupCheck && !p.IsInSubGroup() {
 		return 0, errors.New("invalid point: subgroup check failed")
 	}
-
 	return SizeOfG2AffineCompressed, nil
 }
 

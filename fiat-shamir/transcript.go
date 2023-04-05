@@ -92,29 +92,23 @@ func (t *Transcript) Bind(challengeID string, bValue []byte) error {
 // * H(name || previous_challenge || binded_values...) if the challenge is not the first one
 // * H(name || binded_values... ) if it is the first challenge
 func (t *Transcript) ComputeChallenge(challengeID string) ([]byte, error) {
-
 	challenge, ok := t.challenges[challengeID]
 	if !ok {
 		return nil, errChallengeNotFound
 	}
 
-	// if the challenge was already computed we return it
+	// if the challenge was already computed, return it
 	if challenge.isComputed {
 		return challenge.value, nil
 	}
 
 	// reset before populating the internal state
 	t.h.Reset()
+	defer t.h.Reset()
 
 	// write the challenge name, the purpose is to have a domain separator
-	if hashToField, ok := t.h.(interface {
-		WriteString(rawBytes []byte)
-	}); ok {
-		hashToField.WriteString([]byte(challengeID))
-	} else {
-		if _, err := t.h.Write([]byte(challengeID)); err != nil {
-			return nil, err
-		}
+	if _, err := t.h.Write([]byte(challengeID)); err != nil {
+		return nil, err
 	}
 
 	// write the previous challenge if it's not the first challenge
@@ -137,15 +131,11 @@ func (t *Transcript) ComputeChallenge(challengeID string) ([]byte, error) {
 	// compute the hash of the accumulated values
 	res := t.h.Sum(nil)
 
-	// Use the computed hash directly instead of allocating and copying
-	challenge.value = res
+	challenge.value = make([]byte, len(res))
+	copy(challenge.value, res)
 	challenge.isComputed = true
 
-	t.challenges[challengeID] = challenge
 	t.previous = &challenge
-
-	// Reset the internal state at the end of the function
-	t.h.Reset()
 
 	return res, nil
 }

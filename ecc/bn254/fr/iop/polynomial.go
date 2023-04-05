@@ -192,12 +192,10 @@ func (p *Polynomial) GetCoeff(i int) fr.Element {
 	rho := n / p.size
 	if p.polynomial.Form.Layout == Regular {
 		return (*p.coefficients)[(i+rho*p.shift)%n]
-	} else {
+	}
 		nn := uint64(64 - bits.TrailingZeros(uint(n)))
 		iRev := bits.Reverse64(uint64((i+rho*p.shift)%n)) >> nn
 		return (*p.coefficients)[iRev]
-	}
-
 }
 
 // polynomial represents a polynomial, the vector of coefficients
